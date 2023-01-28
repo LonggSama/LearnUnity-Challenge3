@@ -5,9 +5,9 @@ using UnityEngine;
 public class PlayerControllerX : MonoBehaviour
 {
     public bool gameOver;
-
+    [SerializeField] private float topBound = 17f;
     public float floatForce;
-    private float gravityModifier = 1.5f;
+    public float gravityModifier = 1.5f;
     private Rigidbody playerRb;
 
     public ParticleSystem explosionParticle;
@@ -16,6 +16,7 @@ public class PlayerControllerX : MonoBehaviour
     private AudioSource playerAudio;
     public AudioClip moneySound;
     public AudioClip explodeSound;
+    public AudioClip bounceSound;
 
 
     // Start is called before the first frame update
@@ -23,6 +24,7 @@ public class PlayerControllerX : MonoBehaviour
     {
         Physics.gravity *= gravityModifier;
         playerAudio = GetComponent<AudioSource>();
+        playerRb = GetComponent<Rigidbody>();
 
         // Apply a small upward force at the start of the game
         playerRb.AddForce(Vector3.up * 5, ForceMode.Impulse);
@@ -33,10 +35,17 @@ public class PlayerControllerX : MonoBehaviour
     void Update()
     {
         // While space is pressed and player is low enough, float up
-        if (Input.GetKey(KeyCode.Space) && !gameOver)
+        if (Input.GetKeyDown(KeyCode.Space) && !gameOver && transform.position.y < topBound)
         {
-            playerRb.AddForce(Vector3.up * floatForce);
+            playerRb.AddForce(Vector3.up * floatForce, ForceMode.Impulse);
         }
+
+        if (transform.position.y > topBound)
+        {
+            transform.position = new Vector3(transform.position.x, topBound, transform.position.z);
+            playerRb.AddForce(Vector3.down * 5, ForceMode.Impulse);
+        }
+
     }
 
     private void OnCollisionEnter(Collision other)
@@ -51,15 +60,22 @@ public class PlayerControllerX : MonoBehaviour
             Destroy(other.gameObject);
         } 
 
-        // if player collides with money, fireworks
-        else if (other.gameObject.CompareTag("Money"))
+        if (other.gameObject.CompareTag("Ground"))
+        {
+            playerRb.AddForce(Vector3.up * 10, ForceMode.Impulse);
+            playerAudio.PlayOneShot(bounceSound);
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.gameObject.CompareTag("Money"))
         {
             fireworksParticle.Play();
             playerAudio.PlayOneShot(moneySound, 1.0f);
             Destroy(other.gameObject);
 
         }
-
     }
 
 }
